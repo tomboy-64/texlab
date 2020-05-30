@@ -147,6 +147,12 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
                 work_done_progress_options: WorkDoneProgressOptions::default(),
             }),
             folding_range_provider: Some(FoldingRangeProviderCapability::Simple(true)),
+            execute_command_provider: Some(ExecuteCommandOptions {
+                commands: vec!["build".into(), "forwardSearch".into()],
+                work_done_progress_options: WorkDoneProgressOptions {
+                    work_done_progress: None,
+                },
+            }),
             ..ServerCapabilities::default()
         };
 
@@ -475,8 +481,37 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
         Ok(self.folding_provider.execute(&req).await)
     }
 
-    #[jsonrpc_method("textDocument/build", kind = "request")]
-    pub async fn build(&self, params: BuildParams) -> Result<BuildResult> {
+    #[jsonrpc_method("workspace/executeCommand", kind = "request")]
+    pub async fn execute_command(
+        &self,
+        mut params: ExecuteCommandParams,
+    ) -> Result<serde_json::Value> {
+        match params.command.as_str() {
+            "build" => {
+                if params.arguments.len() != 1 {
+                    return Err("Invalid number of arguments".into());
+                }
+                let params = serde_json::from_value(params.arguments.pop().unwrap())
+                    .map_err(|why| format!("{}", why))?;
+
+                let result = self.build(params).await?;
+                Ok(serde_json::to_value(result).unwrap())
+            }
+            "forwardSearch" => {
+                if params.arguments.len() != 1 {
+                    return Err("Invalid number of arguments".into());
+                }
+
+                let params = serde_json::from_value(params.arguments.pop().unwrap())
+                    .map_err(|why| format!("{}", why))?;
+                let result = self.forward_search(params).await?;
+                Ok(serde_json::to_value(result).unwrap())
+            }
+            _ => Ok(serde_json::Value::Null),
+        }
+    }
+
+    async fn build(&self, params: BuildParams) -> Result<BuildResult> {
         let req = self
             .make_feature_request(params.text_document.as_uri(), params)
             .await?;
@@ -504,8 +539,7 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
         Ok(res)
     }
 
-    #[jsonrpc_method("textDocument/forwardSearch", kind = "request")]
-    pub async fn forward_search(
+    async fn forward_search(
         &self,
         params: TextDocumentPositionParams,
     ) -> Result<ForwardSearchResult> {
