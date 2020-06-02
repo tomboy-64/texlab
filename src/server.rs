@@ -9,7 +9,7 @@ use crate::{
     definition::DefinitionProvider,
     diagnostics::DiagnosticsManager,
     feature::{DocumentView, FeatureProvider, FeatureRequest},
-    folding::FoldingProvider,
+    features::{folding::fold, FeatureContext},
     forward_search,
     highlight::HighlightProvider,
     hover::HoverProvider,
@@ -42,7 +42,6 @@ pub struct LatexLspServer<C> {
     build_provider: BuildProvider<C>,
     completion_provider: CompletionProvider,
     definition_provider: DefinitionProvider,
-    folding_provider: FoldingProvider,
     highlight_provider: HighlightProvider,
     link_provider: LinkProvider,
     reference_provider: ReferenceProvider,
@@ -69,7 +68,6 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
             build_provider: BuildProvider::new(client),
             completion_provider: CompletionProvider::new(),
             definition_provider: DefinitionProvider::new(),
-            folding_provider: FoldingProvider::new(),
             highlight_provider: HighlightProvider::new(),
             link_provider: LinkProvider::new(),
             reference_provider: ReferenceProvider::new(),
@@ -475,10 +473,10 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
 
     #[jsonrpc_method("textDocument/foldingRange", kind = "request")]
     pub async fn folding_range(&self, params: FoldingRangeParams) -> Result<Vec<FoldingRange>> {
-        let req = self
-            .make_feature_request(params.text_document.as_uri(), params)
+        let ctx = self
+            .make_feature_context(params.text_document.as_uri(), params)
             .await?;
-        Ok(self.folding_provider.execute(&req).await)
+        Ok(fold(ctx))
     }
 
     #[jsonrpc_method("workspace/executeCommand", kind = "request")]
@@ -563,6 +561,31 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
         let options = self.config_manager().get().await;
         let _ = self.workspace.detect_root(&params.as_uri(), &options).await;
         Ok(())
+    }
+
+    async fn make_feature_context<P>(&self, uri: Uri, params: P) -> Result<FeatureContext<P>> {
+        let options = self.pull_configuration().await;
+        let snapshot = self.workspace.get().await;
+        let client_capabilities = self.client_capabilities();
+        match snapshot.find(&uri) {
+            Some(current) => Ok(FeatureContext {
+                params,
+                view: crate::features::DocumentView::analyze(
+                    snapshot,
+                    current,
+                    &options,
+                    &self.current_dir,
+                ),
+                distro: Arc::clone(&self.distro),
+                client_capabilities,
+                options,
+                current_dir: Arc::clone(&self.current_dir),
+            }),
+            None => {
+                let msg = format!("Unknown document: {}", uri);
+                Err(msg)
+            }
+        }
     }
 
     async fn make_feature_request<P>(&self, uri: Uri, params: P) -> Result<FeatureRequest<P>> {

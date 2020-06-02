@@ -18,7 +18,7 @@ pub mod components;
 pub mod definition;
 pub mod diagnostics;
 pub mod feature;
-pub mod folding;
+pub mod features;
 pub mod forward_search;
 pub mod highlight;
 pub mod hover;
