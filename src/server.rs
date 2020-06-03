@@ -9,7 +9,7 @@ use crate::{
     definition::DefinitionProvider,
     diagnostics::DiagnosticsManager,
     feature::{DocumentView, FeatureProvider, FeatureRequest},
-    features::{folding::fold, FeatureContext},
+    features::{folding::fold, highlight::highlight, FeatureContext},
     forward_search,
     highlight::HighlightProvider,
     hover::HoverProvider,
@@ -42,7 +42,6 @@ pub struct LatexLspServer<C> {
     build_provider: BuildProvider<C>,
     completion_provider: CompletionProvider,
     definition_provider: DefinitionProvider,
-    highlight_provider: HighlightProvider,
     link_provider: LinkProvider,
     reference_provider: ReferenceProvider,
     prepare_rename_provider: PrepareRenameProvider,
@@ -68,7 +67,6 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
             build_provider: BuildProvider::new(client),
             completion_provider: CompletionProvider::new(),
             definition_provider: DefinitionProvider::new(),
-            highlight_provider: HighlightProvider::new(),
             link_provider: LinkProvider::new(),
             reference_provider: ReferenceProvider::new(),
             prepare_rename_provider: PrepareRenameProvider::new(),
@@ -333,12 +331,12 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
     #[jsonrpc_method("textDocument/documentHighlight", kind = "request")]
     pub async fn document_highlight(
         &self,
-        params: TextDocumentPositionParams,
+        params: DocumentHighlightParams,
     ) -> Result<Vec<DocumentHighlight>> {
-        let req = self
-            .make_feature_request(params.text_document.as_uri(), params)
+        let ctx = self
+            .make_feature_context(params.text_document_position_params.as_uri(), params)
             .await?;
-        Ok(self.highlight_provider.execute(&req).await)
+        Ok(highlight(ctx))
     }
 
     #[jsonrpc_method("workspace/symbol", kind = "request")]

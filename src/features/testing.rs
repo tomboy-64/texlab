@@ -5,9 +5,10 @@ use crate::{
     workspace::{Document, DocumentParams, Snapshot},
 };
 use lsp_types::{
-    ClientCapabilities, CompletionParams, DocumentLinkParams, DocumentSymbolParams,
-    FoldingRangeParams, PartialResultParams, Position, ReferenceContext, ReferenceParams,
-    RenameParams, TextDocumentIdentifier, TextDocumentPositionParams, WorkDoneProgressParams,
+    ClientCapabilities, CompletionParams, DocumentHighlightParams, DocumentLinkParams,
+    DocumentSymbolParams, FoldingRangeParams, PartialResultParams, Position, ReferenceContext,
+    ReferenceParams, RenameParams, TextDocumentIdentifier, TextDocumentPositionParams,
+    WorkDoneProgressParams,
 };
 use std::{path::PathBuf, sync::Arc};
 use typed_builder::TypedBuilder;
@@ -167,6 +168,19 @@ impl<'a> FeatureTester<'a> {
         let text_document = self.identifier();
         let params = DocumentSymbolParams {
             text_document,
+            work_done_progress_params: WorkDoneProgressParams::default(),
+            partial_result_params: PartialResultParams::default(),
+        };
+        self.context(params)
+    }
+
+    pub fn highlight(self) -> FeatureContext<DocumentHighlightParams> {
+        let text_document = self.identifier();
+        let params = DocumentHighlightParams {
+            text_document_position_params: TextDocumentPositionParams::new(
+                text_document,
+                Position::new(self.line, self.character),
+            ),
             work_done_progress_params: WorkDoneProgressParams::default(),
             partial_result_params: PartialResultParams::default(),
         };

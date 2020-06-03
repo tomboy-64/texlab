@@ -1,4 +1,5 @@
 pub mod folding;
+pub mod highlight;
 pub mod prelude;
 pub mod testing;
 
