@@ -9,11 +9,9 @@ use crate::{
     definition::DefinitionProvider,
     diagnostics::DiagnosticsManager,
     feature::{DocumentView, FeatureProvider, FeatureRequest},
-    features::{folding::fold, highlight::highlight, FeatureContext},
+    features::{folding::fold, highlight::highlight, link::link, FeatureContext},
     forward_search,
-    highlight::HighlightProvider,
     hover::HoverProvider,
-    link::LinkProvider,
     protocol::*,
     reference::ReferenceProvider,
     rename::{PrepareRenameProvider, RenameProvider},
@@ -42,7 +40,6 @@ pub struct LatexLspServer<C> {
     build_provider: BuildProvider<C>,
     completion_provider: CompletionProvider,
     definition_provider: DefinitionProvider,
-    link_provider: LinkProvider,
     reference_provider: ReferenceProvider,
     prepare_rename_provider: PrepareRenameProvider,
     rename_provider: RenameProvider,
@@ -67,7 +64,6 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
             build_provider: BuildProvider::new(client),
             completion_provider: CompletionProvider::new(),
             definition_provider: DefinitionProvider::new(),
-            link_provider: LinkProvider::new(),
             reference_provider: ReferenceProvider::new(),
             prepare_rename_provider: PrepareRenameProvider::new(),
             rename_provider: RenameProvider::new(),
@@ -383,10 +379,11 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
 
     #[jsonrpc_method("textDocument/documentLink", kind = "request")]
     pub async fn document_link(&self, params: DocumentLinkParams) -> Result<Vec<DocumentLink>> {
-        let req = self
-            .make_feature_request(params.text_document.as_uri(), params)
+        let ctx = self
+            .make_feature_context(params.text_document.as_uri(), params)
             .await?;
-        Ok(self.link_provider.execute(&req).await)
+
+        Ok(link(ctx))
     }
 
     #[jsonrpc_method("textDocument/formatting", kind = "request")]
