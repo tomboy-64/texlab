@@ -5,8 +5,8 @@ use crate::features::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct HighlightContext {
-    inner: FeatureContext<DocumentHighlightParams>,
-    items: Vec<DocumentHighlight>,
+    pub inner: FeatureContext<DocumentHighlightParams>,
+    pub items: Vec<DocumentHighlight>,
 }
 
 impl HighlightContext {

@@ -2,6 +2,7 @@ pub mod folding;
 pub mod highlight;
 pub mod link;
 pub mod prelude;
+pub mod reference;
 pub mod testing;
 
 use crate::{

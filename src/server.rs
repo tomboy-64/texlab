@@ -9,11 +9,13 @@ use crate::{
     definition::DefinitionProvider,
     diagnostics::DiagnosticsManager,
     feature::{DocumentView, FeatureProvider, FeatureRequest},
-    features::{folding::fold, highlight::highlight, link::link, FeatureContext},
+    features::{
+        folding::fold, highlight::highlight, link::link, reference::find_all_references,
+        FeatureContext,
+    },
     forward_search,
     hover::HoverProvider,
     protocol::*,
-    reference::ReferenceProvider,
     rename::{PrepareRenameProvider, RenameProvider},
     symbol::{document_symbols, workspace_symbols, SymbolProvider},
     syntax::{bibtex, latexindent, CharStream, SyntaxNode},
@@ -40,7 +42,6 @@ pub struct LatexLspServer<C> {
     build_provider: BuildProvider<C>,
     completion_provider: CompletionProvider,
     definition_provider: DefinitionProvider,
-    reference_provider: ReferenceProvider,
     prepare_rename_provider: PrepareRenameProvider,
     rename_provider: RenameProvider,
     symbol_provider: SymbolProvider,
@@ -64,7 +65,6 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
             build_provider: BuildProvider::new(client),
             completion_provider: CompletionProvider::new(),
             definition_provider: DefinitionProvider::new(),
-            reference_provider: ReferenceProvider::new(),
             prepare_rename_provider: PrepareRenameProvider::new(),
             rename_provider: RenameProvider::new(),
             symbol_provider: SymbolProvider::new(),
@@ -318,10 +318,10 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
 
     #[jsonrpc_method("textDocument/references", kind = "request")]
     pub async fn references(&self, params: ReferenceParams) -> Result<Vec<Location>> {
-        let req = self
-            .make_feature_request(params.text_document_position.as_uri(), params)
+        let ctx = self
+            .make_feature_context(params.text_document_position.as_uri(), params)
             .await?;
-        Ok(self.reference_provider.execute(&req).await)
+        Ok(find_all_references(ctx))
     }
 
     #[jsonrpc_method("textDocument/documentHighlight", kind = "request")]

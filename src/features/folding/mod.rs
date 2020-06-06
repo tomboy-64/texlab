@@ -9,8 +9,8 @@ use crate::features::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct FoldingContext {
-    inner: FeatureContext<FoldingRangeParams>,
-    items: Vec<FoldingRange>,
+    pub inner: FeatureContext<FoldingRangeParams>,
+    pub items: Vec<FoldingRange>,
 }
 
 impl FoldingContext {

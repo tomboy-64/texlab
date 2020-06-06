@@ -6,8 +6,8 @@ use crate::features::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct LinkContext {
-    inner: FeatureContext<DocumentLinkParams>,
-    items: Vec<DocumentLink>,
+    pub inner: FeatureContext<DocumentLinkParams>,
+    pub items: Vec<DocumentLink>,
 }
 
 impl LinkContext {
