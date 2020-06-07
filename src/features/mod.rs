@@ -1,6 +1,8 @@
 pub mod folding;
 pub mod highlight;
+pub mod hover;
 pub mod link;
+pub mod outline;
 pub mod prelude;
 pub mod reference;
 pub mod testing;

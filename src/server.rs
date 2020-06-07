@@ -10,11 +10,10 @@ use crate::{
     diagnostics::DiagnosticsManager,
     feature::{DocumentView, FeatureProvider, FeatureRequest},
     features::{
-        folding::fold, highlight::highlight, link::link, reference::find_all_references,
-        FeatureContext,
+        folding::fold, highlight::highlight, hover::hover, link::link,
+        reference::find_all_references, FeatureContext,
     },
     forward_search,
-    hover::HoverProvider,
     protocol::*,
     rename::{PrepareRenameProvider, RenameProvider},
     symbol::{document_symbols, workspace_symbols, SymbolProvider},
@@ -45,7 +44,6 @@ pub struct LatexLspServer<C> {
     prepare_rename_provider: PrepareRenameProvider,
     rename_provider: RenameProvider,
     symbol_provider: SymbolProvider,
-    hover_provider: HoverProvider,
     diagnostics_manager: DiagnosticsManager,
     last_position_by_uri: CHashMap<Uri, Position>,
 }
@@ -68,7 +66,6 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
             prepare_rename_provider: PrepareRenameProvider::new(),
             rename_provider: RenameProvider::new(),
             symbol_provider: SymbolProvider::new(),
-            hover_provider: HoverProvider::new(),
             diagnostics_manager: DiagnosticsManager::default(),
             last_position_by_uri: CHashMap::new(),
         }
@@ -282,15 +279,17 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
     }
 
     #[jsonrpc_method("textDocument/hover", kind = "request")]
-    pub async fn hover(&self, params: TextDocumentPositionParams) -> Result<Option<Hover>> {
-        let req = self
-            .make_feature_request(params.text_document.as_uri(), params)
+    pub async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
+        let ctx = self
+            .make_feature_context(params.text_document_position_params.as_uri(), params)
             .await?;
 
-        self.last_position_by_uri
-            .insert(req.current().uri.clone(), req.params.position);
+        self.last_position_by_uri.insert(
+            ctx.current().uri.clone(),
+            ctx.params.text_document_position_params.position,
+        );
 
-        Ok(self.hover_provider.execute(&req).await)
+        Ok(hover(ctx).await)
     }
 
     #[jsonrpc_method("textDocument/definition", kind = "request")]

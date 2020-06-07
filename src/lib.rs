@@ -20,7 +20,6 @@ pub mod diagnostics;
 pub mod feature;
 pub mod features;
 pub mod forward_search;
-pub mod hover;
 pub mod outline;
 pub mod protocol;
 pub mod rename;

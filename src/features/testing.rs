@@ -6,9 +6,9 @@ use crate::{
 };
 use lsp_types::{
     ClientCapabilities, CompletionParams, DocumentHighlightParams, DocumentLinkParams,
-    DocumentSymbolParams, FoldingRangeParams, PartialResultParams, Position, ReferenceContext,
-    ReferenceParams, RenameParams, TextDocumentIdentifier, TextDocumentPositionParams,
-    WorkDoneProgressParams,
+    DocumentSymbolParams, FoldingRangeParams, HoverParams, PartialResultParams, Position,
+    ReferenceContext, ReferenceParams, RenameParams, TextDocumentIdentifier,
+    TextDocumentPositionParams, WorkDoneProgressParams,
 };
 use std::{path::PathBuf, sync::Arc};
 use typed_builder::TypedBuilder;
@@ -183,6 +183,18 @@ impl<'a> FeatureTester<'a> {
             ),
             work_done_progress_params: WorkDoneProgressParams::default(),
             partial_result_params: PartialResultParams::default(),
+        };
+        self.context(params)
+    }
+
+    pub fn hover(self) -> FeatureContext<HoverParams> {
+        let text_document = self.identifier();
+        let params = HoverParams {
+            text_document_position_params: TextDocumentPositionParams::new(
+                text_document,
+                Position::new(self.line, self.character),
+            ),
+            work_done_progress_params: WorkDoneProgressParams::default(),
         };
         self.context(params)
     }
