@@ -10,13 +10,17 @@ use crate::{
     diagnostics::DiagnosticsManager,
     feature::{DocumentView, FeatureProvider, FeatureRequest},
     features::{
-        folding::fold, highlight::highlight, hover::hover, link::link,
-        reference::find_all_references, FeatureContext,
+        folding::fold,
+        highlight::highlight,
+        hover::hover,
+        link::link,
+        reference::find_all_references,
+        symbol::{find_document_symbols, find_workspace_symbols},
+        FeatureContext,
     },
     forward_search,
     protocol::*,
     rename::{PrepareRenameProvider, RenameProvider},
-    symbol::{document_symbols, workspace_symbols, SymbolProvider},
     syntax::{bibtex, latexindent, CharStream, SyntaxNode},
     tex::{Distribution, DistributionKind, KpsewhichError},
     workspace::{DocumentContent, Workspace},
@@ -43,7 +47,6 @@ pub struct LatexLspServer<C> {
     definition_provider: DefinitionProvider,
     prepare_rename_provider: PrepareRenameProvider,
     rename_provider: RenameProvider,
-    symbol_provider: SymbolProvider,
     diagnostics_manager: DiagnosticsManager,
     last_position_by_uri: CHashMap<Uri, Position>,
 }
@@ -65,7 +68,6 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
             definition_provider: DefinitionProvider::new(),
             prepare_rename_provider: PrepareRenameProvider::new(),
             rename_provider: RenameProvider::new(),
-            symbol_provider: SymbolProvider::new(),
             diagnostics_manager: DiagnosticsManager::default(),
             last_position_by_uri: CHashMap::new(),
         }
@@ -343,15 +345,14 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
         let client_capabilities = self.client_capabilities();
         let snapshot = self.workspace.get().await;
         let options = self.config_manager().get().await;
-        let symbols = workspace_symbols(
+        let symbols = find_workspace_symbols(
             distro,
             client_capabilities,
             snapshot,
             &options,
             Arc::clone(&self.current_dir),
             &params,
-        )
-        .await;
+        );
         Ok(symbols)
     }
 
@@ -360,20 +361,11 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
         &self,
         params: DocumentSymbolParams,
     ) -> Result<DocumentSymbolResponse> {
-        let req = self
-            .make_feature_request(params.text_document.as_uri(), params)
+        let ctx = self
+            .make_feature_context(params.text_document.as_uri(), params)
             .await?;
 
-        let symbols = self.symbol_provider.execute(&req).await;
-        let response = document_symbols(
-            &req.client_capabilities,
-            req.snapshot(),
-            &req.current().uri,
-            &req.options,
-            &req.current_dir,
-            symbols.into_iter().map(Into::into).collect(),
-        );
-        Ok(response)
+        Ok(find_document_symbols(ctx))
     }
 
     #[jsonrpc_method("textDocument/documentLink", kind = "request")]
