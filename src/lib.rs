@@ -15,7 +15,6 @@ cfg_if::cfg_if! {
 
 pub mod completion;
 pub mod components;
-pub mod definition;
 pub mod diagnostics;
 pub mod feature;
 pub mod features;
@@ -23,7 +22,6 @@ pub mod forward_search;
 pub mod outline;
 pub mod protocol;
 pub mod rename;
-pub mod symbol;
 pub mod syntax;
 pub mod tex;
 pub mod workspace;

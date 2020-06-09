@@ -6,10 +6,10 @@ use crate::{
     completion::{CompletionItemData, CompletionProvider},
     components::COMPONENT_DATABASE,
     config::ConfigManager,
-    definition::DefinitionProvider,
     diagnostics::DiagnosticsManager,
     feature::{DocumentView, FeatureProvider, FeatureRequest},
     features::{
+        definition::goto_definition,
         folding::fold,
         highlight::highlight,
         hover::hover,
@@ -44,7 +44,6 @@ pub struct LatexLspServer<C> {
     workspace: Workspace,
     build_provider: BuildProvider<C>,
     completion_provider: CompletionProvider,
-    definition_provider: DefinitionProvider,
     prepare_rename_provider: PrepareRenameProvider,
     rename_provider: RenameProvider,
     diagnostics_manager: DiagnosticsManager,
@@ -65,7 +64,6 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
             workspace,
             build_provider: BuildProvider::new(client),
             completion_provider: CompletionProvider::new(),
-            definition_provider: DefinitionProvider::new(),
             prepare_rename_provider: PrepareRenameProvider::new(),
             rename_provider: RenameProvider::new(),
             diagnostics_manager: DiagnosticsManager::default(),
@@ -295,26 +293,12 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
     }
 
     #[jsonrpc_method("textDocument/definition", kind = "request")]
-    pub async fn definition(
-        &self,
-        params: TextDocumentPositionParams,
-    ) -> Result<DefinitionResponse> {
-        let req = self
-            .make_feature_request(params.text_document.as_uri(), params)
+    pub async fn definition(&self, params: GotoDefinitionParams) -> Result<GotoDefinitionResponse> {
+        let ctx = self
+            .make_feature_context(params.text_document_position_params.as_uri(), params)
             .await?;
-        let results = self.definition_provider.execute(&req).await;
-        let response = if req.client_capabilities.has_definition_link_support() {
-            DefinitionResponse::LocationLinks(results)
-        } else {
-            DefinitionResponse::Locations(
-                results
-                    .into_iter()
-                    .map(|link| Location::new(link.target_uri, link.target_selection_range))
-                    .collect(),
-            )
-        };
 
-        Ok(response)
+        Ok(goto_definition(ctx))
     }
 
     #[jsonrpc_method("textDocument/references", kind = "request")]

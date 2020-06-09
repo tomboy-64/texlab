@@ -7,6 +7,7 @@ pub mod prelude;
 pub mod reference;
 pub mod symbol;
 pub mod testing;
+pub mod definition;
 
 use crate::{
     components::{Component, COMPONENT_DATABASE},

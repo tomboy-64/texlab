@@ -6,9 +6,9 @@ use crate::{
 };
 use lsp_types::{
     ClientCapabilities, CompletionParams, DocumentHighlightParams, DocumentLinkParams,
-    DocumentSymbolParams, FoldingRangeParams, HoverParams, PartialResultParams, Position,
-    ReferenceContext, ReferenceParams, RenameParams, TextDocumentIdentifier,
-    TextDocumentPositionParams, WorkDoneProgressParams,
+    DocumentSymbolParams, FoldingRangeParams, GotoDefinitionParams, HoverParams,
+    PartialResultParams, Position, ReferenceContext, ReferenceParams, RenameParams,
+    TextDocumentIdentifier, TextDocumentPositionParams, WorkDoneProgressParams,
 };
 use std::{path::PathBuf, sync::Arc};
 use typed_builder::TypedBuilder;
@@ -95,6 +95,18 @@ impl<'a> FeatureTester<'a> {
             options: self.options(),
             current_dir: Arc::new(self.current_dir.clone()),
         }
+    }
+
+    pub fn definition(self) -> FeatureContext<GotoDefinitionParams> {
+        let params = GotoDefinitionParams {
+            text_document_position_params: TextDocumentPositionParams::new(
+                self.identifier(),
+                Position::new(self.line, self.character),
+            ),
+            work_done_progress_params: WorkDoneProgressParams::default(),
+            partial_result_params: PartialResultParams::default(),
+        };
+        self.context(params)
     }
 
     pub fn completion(self) -> FeatureContext<CompletionParams> {

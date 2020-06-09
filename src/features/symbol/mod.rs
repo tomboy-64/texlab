@@ -4,6 +4,8 @@ mod section;
 mod string;
 mod types;
 
+pub use self::section::build_section_tree;
+
 use self::{
     entry::find_entry_symbols,
     project_order::ProjectOrdering,
