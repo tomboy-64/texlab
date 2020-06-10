@@ -1,14 +1,4 @@
-use crate::{
-    feature::{FeatureProvider, FeatureRequest},
-    protocol::{
-        BuildParams, BuildResult, BuildStatus, ClientCapabilitiesExt, LatexOptions,
-        LogMessageParams, LspClient, MessageType, ProgressParams, ProgressParamsValue,
-        ProgressToken, Uri, WorkDoneProgress, WorkDoneProgressBegin, WorkDoneProgressCreateParams,
-        WorkDoneProgressEnd,
-    },
-};
-use async_trait::async_trait;
-use chashmap::CHashMap;
+use crate::features::prelude::*;
 use futures::{
     future::{AbortHandle, Abortable, Aborted},
     lock::Mutex,
@@ -16,30 +6,37 @@ use futures::{
     stream,
 };
 use log::error;
-use std::{collections::HashMap, io, path::Path, process::Stdio, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    io,
+    path::Path,
+    process::Stdio,
+    sync::Arc,
+};
 use tokio::{
     io::{AsyncBufReadExt, BufReader},
     process::Command,
 };
 use uuid::Uuid;
 
-pub struct BuildProvider<C> {
+#[derive(Debug)]
+pub struct BuildEngine<C> {
     client: Arc<C>,
     handles_by_token: Mutex<HashMap<ProgressToken, AbortHandle>>,
-    current_docs: CHashMap<Uri, ()>,
+    current_docs: Mutex<HashSet<Uri>>,
 }
 
-impl<C> BuildProvider<C> {
+impl<C: LspClient + Send + Sync + 'static> BuildEngine<C> {
     pub fn new(client: Arc<C>) -> Self {
         Self {
             client,
-            handles_by_token: Mutex::new(HashMap::new()),
-            current_docs: CHashMap::new(),
+            handles_by_token: Mutex::default(),
+            current_docs: Mutex::default(),
         }
     }
 
-    pub fn is_building(&self) -> bool {
-        self.current_docs.len() > 0
+    pub async fn is_busy(&self) -> bool {
+        !self.current_docs.lock().await.is_empty()
     }
 
     pub async fn cancel(&self, token: ProgressToken) {
@@ -52,17 +49,8 @@ impl<C> BuildProvider<C> {
             }
         }
     }
-}
 
-#[async_trait]
-impl<C> FeatureProvider for BuildProvider<C>
-where
-    C: LspClient + Send + Sync + 'static,
-{
-    type Params = BuildParams;
-    type Output = BuildResult;
-
-    async fn execute<'a>(&'a self, req: &'a FeatureRequest<BuildParams>) -> BuildResult {
+    pub async fn execute(&self, ctx: &FeatureContext<BuildParams>) -> BuildResult {
         let token = ProgressToken::String(format!("texlab-build-{}", Uuid::new_v4()));
         let (handle, reg) = AbortHandle::new_pair();
         {
@@ -70,10 +58,10 @@ where
             handles_by_token.insert(token.clone(), handle);
         }
 
-        let doc = req
+        let doc = ctx
             .snapshot()
-            .parent(&req.current().uri, &req.options, &req.current_dir)
-            .unwrap_or_else(|| Arc::clone(&req.view.current));
+            .parent(&ctx.current().uri, &ctx.options, &ctx.current_dir)
+            .unwrap_or_else(|| Arc::clone(&ctx.view.current));
 
         if !doc.is_file() {
             error!("Unable to build the document {}: wrong URI scheme", doc.uri);
@@ -82,16 +70,19 @@ where
             };
         }
 
-        if self.current_docs.get(&doc.uri).is_some() {
-            return BuildResult {
-                status: BuildStatus::Success,
-            };
+        {
+            let mut current_docs = self.current_docs.lock().await;
+            if current_docs.get(&doc.uri).is_some() {
+                return BuildResult {
+                    status: BuildStatus::Success,
+                };
+            }
+            current_docs.insert(doc.uri.clone());
         }
-        self.current_docs.insert(doc.uri.clone(), ());
 
         let status = match doc.uri.to_file_path() {
             Ok(path) => {
-                if req.client_capabilities.has_work_done_progress_support() {
+                if ctx.client_capabilities.has_work_done_progress_support() {
                     let params = WorkDoneProgressCreateParams {
                         token: token.clone(),
                     };
@@ -112,7 +103,7 @@ where
                     self.client.progress(params).await;
                 }
 
-                let latex_options = req.options.latex.clone().unwrap_or_default();
+                let latex_options = ctx.options.latex.clone().unwrap_or_default();
                 let client = Arc::clone(&self.client);
                 match Abortable::new(build(&path, &latex_options, client), reg).await {
                     Ok(Ok(true)) => BuildStatus::Success,
@@ -130,7 +121,7 @@ where
             }
         };
 
-        if req.client_capabilities.has_work_done_progress_support() {
+        if ctx.client_capabilities.has_work_done_progress_support() {
             let params = ProgressParams {
                 token: token.clone(),
                 value: ProgressParamsValue::WorkDone(WorkDoneProgress::End(WorkDoneProgressEnd {
@@ -144,7 +135,9 @@ where
             handles_by_token.remove(&token);
         }
 
-        self.current_docs.remove(&doc.uri);
+        {
+            self.current_docs.lock().await.remove(&doc.uri);
+        }
         BuildResult { status }
     }
 }

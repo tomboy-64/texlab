@@ -2,13 +2,13 @@
 use crate::citeproc::render_citation;
 
 use crate::{
-    build::BuildProvider,
     completion::{CompletionItemData, CompletionProvider},
     components::COMPONENT_DATABASE,
     config::ConfigManager,
     diagnostics::DiagnosticsManager,
     feature::{DocumentView, FeatureProvider, FeatureRequest},
     features::{
+        build::BuildEngine,
         definition::goto_definition,
         folding::fold,
         highlight::highlight,
@@ -42,7 +42,7 @@ pub struct LatexLspServer<C> {
     config_manager: OnceCell<ConfigManager<C>>,
     action_manager: ActionManager,
     workspace: Workspace,
-    build_provider: BuildProvider<C>,
+    build_engine: BuildEngine<C>,
     completion_provider: CompletionProvider,
     prepare_rename_provider: PrepareRenameProvider,
     rename_provider: RenameProvider,
@@ -62,7 +62,7 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
             config_manager: OnceCell::new(),
             action_manager: ActionManager::default(),
             workspace,
-            build_provider: BuildProvider::new(client),
+            build_engine: BuildEngine::new(client),
             completion_provider: CompletionProvider::new(),
             prepare_rename_provider: PrepareRenameProvider::new(),
             rename_provider: RenameProvider::new(),
@@ -234,7 +234,7 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
 
     #[jsonrpc_method("window/workDoneProgress/cancel", kind = "notification")]
     pub async fn work_done_progress_cancel(&self, params: WorkDoneProgressCancelParams) {
-        self.build_provider.cancel(params.token).await;
+        self.build_engine.cancel(params.token).await;
     }
 
     #[jsonrpc_method("textDocument/completion", kind = "request")]
@@ -480,27 +480,27 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
     }
 
     async fn build(&self, params: BuildParams) -> Result<BuildResult> {
-        let req = self
-            .make_feature_request(params.text_document.as_uri(), params)
+        let ctx = self
+            .make_feature_context(params.text_document.as_uri(), params)
             .await?;
 
         let pos = self
             .last_position_by_uri
-            .get(&req.current().uri)
+            .get(&ctx.current().uri)
             .map(|pos| *pos)
             .unwrap_or_default();
 
-        let res = self.build_provider.execute(&req).await;
+        let res = self.build_engine.execute(&ctx).await;
 
-        if req
+        if ctx
             .options
             .latex
             .and_then(|opts| opts.build)
             .unwrap_or_default()
             .forward_search_after()
-            && !self.build_provider.is_building()
+            && !self.build_engine.is_busy().await
         {
-            let params = TextDocumentPositionParams::new(req.params.text_document, pos);
+            let params = TextDocumentPositionParams::new(ctx.params.text_document, pos);
             self.forward_search(params).await?;
         }
 

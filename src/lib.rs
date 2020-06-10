@@ -7,7 +7,6 @@ pub mod test;
 cfg_if::cfg_if! {
     if #[cfg(feature = "server")] {
         mod config;
-        mod build;
 
         pub mod server;
     }
