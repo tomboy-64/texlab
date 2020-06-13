@@ -20,7 +20,6 @@ pub mod features;
 pub mod forward_search;
 pub mod outline;
 pub mod protocol;
-pub mod rename;
 pub mod syntax;
 pub mod tex;
 pub mod workspace;

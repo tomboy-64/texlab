@@ -7,6 +7,7 @@ pub mod link;
 pub mod outline;
 pub mod prelude;
 pub mod reference;
+pub mod rename;
 pub mod symbol;
 pub mod testing;
 

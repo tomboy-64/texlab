@@ -15,12 +15,12 @@ use crate::{
         hover::hover,
         link::link,
         reference::find_all_references,
+        rename::{prepare_rename, rename},
         symbol::{find_document_symbols, find_workspace_symbols},
         FeatureContext,
     },
     forward_search,
     protocol::*,
-    rename::{PrepareRenameProvider, RenameProvider},
     syntax::{bibtex, latexindent, CharStream, SyntaxNode},
     tex::{Distribution, DistributionKind, KpsewhichError},
     workspace::{DocumentContent, Workspace},
@@ -44,8 +44,6 @@ pub struct LatexLspServer<C> {
     workspace: Workspace,
     build_engine: BuildEngine<C>,
     completion_provider: CompletionProvider,
-    prepare_rename_provider: PrepareRenameProvider,
-    rename_provider: RenameProvider,
     diagnostics_manager: DiagnosticsManager,
     last_position_by_uri: CHashMap<Uri, Position>,
 }
@@ -64,8 +62,6 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
             workspace,
             build_engine: BuildEngine::new(client),
             completion_provider: CompletionProvider::new(),
-            prepare_rename_provider: PrepareRenameProvider::new(),
-            rename_provider: RenameProvider::new(),
             diagnostics_manager: DiagnosticsManager::default(),
             last_position_by_uri: CHashMap::new(),
         }
@@ -427,18 +423,16 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
         &self,
         params: TextDocumentPositionParams,
     ) -> Result<Option<Range>> {
-        let req = self
-            .make_feature_request(params.text_document.as_uri(), params)
-            .await?;
-        Ok(self.prepare_rename_provider.execute(&req).await)
+        let ctx = self.make_feature_context(params.as_uri(), params).await?;
+        Ok(prepare_rename(ctx))
     }
 
     #[jsonrpc_method("textDocument/rename", kind = "request")]
     pub async fn rename(&self, params: RenameParams) -> Result<Option<WorkspaceEdit>> {
-        let req = self
-            .make_feature_request(params.text_document_position.text_document.as_uri(), params)
+        let ctx = self
+            .make_feature_context(params.text_document_position.as_uri(), params)
             .await?;
-        Ok(self.rename_provider.execute(&req).await)
+        Ok(rename(ctx))
     }
 
     #[jsonrpc_method("textDocument/foldingRange", kind = "request")]
