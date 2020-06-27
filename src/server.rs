@@ -2,13 +2,12 @@
 use crate::citeproc::render_citation;
 
 use crate::{
-    completion::{CompletionItemData, CompletionProvider},
     components::COMPONENT_DATABASE,
     config::ConfigManager,
     diagnostics::DiagnosticsManager,
-    feature::{DocumentView, FeatureProvider, FeatureRequest},
     features::{
         build::BuildEngine,
+        completion::{complete, CompletionItemData},
         definition::goto_definition,
         folding::fold,
         highlight::highlight,
@@ -43,7 +42,6 @@ pub struct LatexLspServer<C> {
     action_manager: ActionManager,
     workspace: Workspace,
     build_engine: BuildEngine<C>,
-    completion_provider: CompletionProvider,
     diagnostics_manager: DiagnosticsManager,
     last_position_by_uri: CHashMap<Uri, Position>,
 }
@@ -61,7 +59,6 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
             action_manager: ActionManager::default(),
             workspace,
             build_engine: BuildEngine::new(client),
-            completion_provider: CompletionProvider::new(),
             diagnostics_manager: DiagnosticsManager::default(),
             last_position_by_uri: CHashMap::new(),
         }
@@ -235,18 +232,18 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
 
     #[jsonrpc_method("textDocument/completion", kind = "request")]
     pub async fn completion(&self, params: CompletionParams) -> Result<CompletionList> {
-        let req = self
-            .make_feature_request(params.text_document_position.text_document.as_uri(), params)
+        let ctx = self
+            .make_feature_context(params.text_document_position.as_uri(), params)
             .await?;
 
         self.last_position_by_uri.insert(
-            req.current().uri.clone(),
-            req.params.text_document_position.position,
+            ctx.current().uri.clone(),
+            ctx.params.text_document_position.position,
         );
 
         Ok(CompletionList {
             is_incomplete: true,
-            items: self.completion_provider.execute(&req).await,
+            items: complete(ctx).await,
         })
     }
 
@@ -359,16 +356,16 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
 
     #[jsonrpc_method("textDocument/formatting", kind = "request")]
     pub async fn formatting(&self, params: DocumentFormattingParams) -> Result<Vec<TextEdit>> {
-        let req = self
-            .make_feature_request(params.text_document.as_uri(), params)
+        let ctx = self
+            .make_feature_context(params.text_document.as_uri(), params)
             .await?;
         let mut edits = Vec::new();
-        match &req.current().content {
+        match &ctx.current().content {
             DocumentContent::Latex(_) => {
-                Self::run_latexindent(&req.current().text, "tex", &mut edits).await;
+                Self::run_latexindent(&ctx.current().text, "tex", &mut edits).await;
             }
             DocumentContent::Bibtex(tree) => {
-                let options = req
+                let options = ctx
                     .options
                     .bibtex
                     .clone()
@@ -378,8 +375,8 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
                 match options.formatter.unwrap_or_default() {
                     BibtexFormatter::Texlab => {
                         let params = bibtex::FormattingParams {
-                            tab_size: req.params.options.tab_size as usize,
-                            insert_spaces: req.params.options.insert_spaces,
+                            tab_size: ctx.params.options.tab_size as usize,
+                            insert_spaces: ctx.params.options.insert_spaces,
                             options: &options,
                         };
 
@@ -396,7 +393,7 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
                         }
                     }
                     BibtexFormatter::Latexindent => {
-                        Self::run_latexindent(&req.current().text, "bib", &mut edits).await;
+                        Self::run_latexindent(&ctx.current().text, "bib", &mut edits).await;
                     }
                 }
             }
@@ -505,15 +502,15 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
         &self,
         params: TextDocumentPositionParams,
     ) -> Result<ForwardSearchResult> {
-        let req = self
-            .make_feature_request(params.text_document.as_uri(), params)
+        let ctx = self
+            .make_feature_context(params.text_document.as_uri(), params)
             .await?;
 
         forward_search::search(
-            &req.view.snapshot,
-            &req.current().uri,
-            req.params.position.line,
-            &req.options,
+            &ctx.view.snapshot,
+            &ctx.current().uri,
+            ctx.params.position.line,
+            &ctx.options,
             &self.current_dir,
         )
         .await
@@ -541,26 +538,6 @@ impl<C: LspClient + Send + Sync + 'static> LatexLspServer<C> {
                     &self.current_dir,
                 ),
                 distro: Arc::clone(&self.distro),
-                client_capabilities,
-                options,
-                current_dir: Arc::clone(&self.current_dir),
-            }),
-            None => {
-                let msg = format!("Unknown document: {}", uri);
-                Err(msg)
-            }
-        }
-    }
-
-    async fn make_feature_request<P>(&self, uri: Uri, params: P) -> Result<FeatureRequest<P>> {
-        let options = self.pull_configuration().await;
-        let snapshot = self.workspace.get().await;
-        let client_capabilities = self.client_capabilities();
-        match snapshot.find(&uri) {
-            Some(current) => Ok(FeatureRequest {
-                params,
-                view: DocumentView::analyze(snapshot, current, &options, &self.current_dir),
-                distro: self.distro.clone(),
                 client_capabilities,
                 options,
                 current_dir: Arc::clone(&self.current_dir),

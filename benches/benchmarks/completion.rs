@@ -3,7 +3,7 @@ use criterion::{BenchmarkId, Criterion};
 use futures::executor::block_on;
 use indoc::indoc;
 use std::time::Duration;
-use texlab::{completion::CompletionProvider, feature::FeatureTester};
+use texlab::features::{completion::complete, testing::FeatureTester};
 
 fn criterion_benchmark(criterion: &mut Criterion) {
     criterion.bench_with_input(
@@ -12,12 +12,15 @@ fn criterion_benchmark(criterion: &mut Criterion) {
         |b, code| {
             b.iter(|| {
                 block_on(async {
-                    FeatureTester::new()
-                        .file("main.tex", *code)
+                    let ctx = FeatureTester::builder()
+                        .files(vec![("main.tex", *code)])
                         .main("main.tex")
-                        .position(0, 0)
-                        .test_completion(CompletionProvider::new())
-                        .await
+                        .line(0)
+                        .character(0)
+                        .build()
+                        .completion();
+
+                    complete(ctx).await
                 });
             });
         },
@@ -29,12 +32,15 @@ fn criterion_benchmark(criterion: &mut Criterion) {
         |b, code| {
             b.iter(|| {
                 block_on(async {
-                    FeatureTester::new()
-                        .file("main.tex", *code)
+                    let ctx = FeatureTester::builder()
+                        .files(vec![("main.tex", *code)])
                         .main("main.tex")
-                        .position(0, 1)
-                        .test_completion(CompletionProvider::new())
-                        .await
+                        .line(0)
+                        .character(1)
+                        .build()
+                        .completion();
+
+                    complete(ctx).await
                 });
             });
         },
@@ -46,12 +52,15 @@ fn criterion_benchmark(criterion: &mut Criterion) {
         |b, code| {
             b.iter(|| {
                 block_on(async {
-                    FeatureTester::new()
-                        .file("main.tex", *code)
+                    let ctx = FeatureTester::builder()
+                        .files(vec![("main.tex", *code)])
                         .main("main.tex")
-                        .position(30, 1)
-                        .test_completion(CompletionProvider::new())
-                        .await
+                        .line(30)
+                        .character(1)
+                        .build()
+                        .completion();
+
+                    complete(ctx).await
                 });
             });
         },
@@ -63,12 +72,15 @@ fn criterion_benchmark(criterion: &mut Criterion) {
         |b, code| {
             b.iter(|| {
                 block_on(async {
-                    FeatureTester::new()
-                        .file("main.tex", *code)
+                    let ctx = FeatureTester::builder()
+                        .files(vec![("main.tex", *code)])
                         .main("main.tex")
-                        .position(9, 9)
-                        .test_completion(CompletionProvider::new())
-                        .await
+                        .line(9)
+                        .character(9)
+                        .build()
+                        .completion();
+
+                    complete(ctx).await
                 });
             })
         },
@@ -80,12 +92,15 @@ fn criterion_benchmark(criterion: &mut Criterion) {
         |b, code| {
             b.iter(|| {
                 block_on(async {
-                    FeatureTester::new()
-                        .file("main.tex", *code)
+                    let ctx = FeatureTester::builder()
+                        .files(vec![("main.tex", *code)])
                         .main("main.tex")
-                        .position(15, 7)
-                        .test_completion(CompletionProvider::new())
-                        .await
+                        .line(15)
+                        .character(7)
+                        .build()
+                        .completion();
+
+                    complete(ctx).await
                 });
             })
         },
