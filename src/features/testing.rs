@@ -4,7 +4,7 @@ use crate::{
     tex::{Language, Resolver, UnknownDistribution},
     workspace::{Document, DocumentParams, Snapshot},
 };
-use lsp_types::{
+use language_server::types::{
     ClientCapabilities, CompletionParams, DocumentHighlightParams, DocumentLinkParams,
     DocumentSymbolParams, FoldingRangeParams, GotoDefinitionParams, HoverParams,
     PartialResultParams, Position, ReferenceContext, ReferenceParams, RenameParams,

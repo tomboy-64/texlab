@@ -1,8 +1,9 @@
 use crate::{
-    protocol::{Position, Range, RangeExt},
+    protocol::RangeExt,
     syntax::{Span, SyntaxNode},
 };
 use itertools::Itertools;
+use language_server::types::{Position, Range};
 use petgraph::graph::{Graph, NodeIndex};
 use serde::{Deserialize, Serialize};
 use std::fmt;

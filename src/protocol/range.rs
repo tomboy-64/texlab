@@ -1,4 +1,4 @@
-use lsp_types::{Position, Range};
+use language_server::types::{Position, Range};
 
 pub trait RangeExt {
     fn new_simple(start_line: u64, start_character: u64, end_line: u64, end_character: u64)

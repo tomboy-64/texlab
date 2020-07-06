@@ -1,8 +1,8 @@
 use crate::{
-    protocol::{Diagnostic, DiagnosticSeverity, Position, Range},
     syntax::{bibtex, SyntaxNode},
     workspace::{Document, DocumentContent},
 };
+use language_server::types::{Diagnostic, DiagnosticSeverity, Position, Range};
 use petgraph::graph::NodeIndex;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

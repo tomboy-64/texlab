@@ -10,7 +10,7 @@ pub use self::{
 };
 
 use self::{compile::Compiler, miktex::Miktex, tectonic::Tectonic, texlive::Texlive};
-use async_trait::async_trait;
+use language_server::async_trait::async_trait;
 use std::{fmt, process::Stdio, sync::Arc};
 use tokio::process::Command;
 

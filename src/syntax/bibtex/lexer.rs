@@ -101,10 +101,8 @@ impl<'a> Iterator for Lexer<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        protocol::{Position, Range},
-        syntax::text::Span,
-    };
+    use crate::syntax::text::Span;
+    use language_server::types::{Position, Range};
 
     fn verify<'a>(lexer: &mut Lexer<'a>, line: u64, character: u64, text: &str, kind: TokenKind) {
         let start = Position::new(line, character);

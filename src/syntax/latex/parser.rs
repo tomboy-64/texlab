@@ -1,11 +1,12 @@
 use super::ast::*;
 use crate::{
-    protocol::{Range, RangeExt},
+    protocol::RangeExt,
     syntax::{
         generic_ast::{Ast, AstNodeIndex},
         text::SyntaxNode,
     },
 };
+use language_server::types::Range;
 use std::iter::Peekable;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

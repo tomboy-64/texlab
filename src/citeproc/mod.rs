@@ -6,12 +6,10 @@ use self::{
     bibutils::{InputFormat, OutputFormat},
     ris::{RisLibrary, RisReference},
 };
-use crate::{
-    protocol::{BibtexFormattingOptions, MarkupContent, MarkupKind},
-    syntax::bibtex,
-};
+use crate::{protocol::BibtexFormattingOptions, syntax::bibtex};
 use citeproc::prelude::*;
 use citeproc_db::PredefinedLocales;
+use language_server::types::{MarkupContent, MarkupKind};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::sync::Arc;

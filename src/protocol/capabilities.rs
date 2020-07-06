@@ -1,4 +1,4 @@
-use lsp_types::{ClientCapabilities, MarkupKind};
+use language_server::types::{ClientCapabilities, MarkupKind};
 
 pub trait ClientCapabilitiesExt {
     fn has_definition_link_support(&self) -> bool;
@@ -60,7 +60,10 @@ impl ClientCapabilitiesExt for ClientCapabilities {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lsp_types::*;
+    use language_server::types::{
+        DocumentSymbolCapability, GotoCapability, HoverCapability, TextDocumentClientCapabilities,
+        WindowClientCapabilities,
+    };
 
     #[test]
     fn has_definition_link_support_true() {

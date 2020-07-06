@@ -1,4 +1,4 @@
-use lsp_types::{CompletionTextEdit, TextEdit};
+use language_server::types::{CompletionTextEdit, TextEdit};
 
 pub trait CompletionTextEditExt {
     fn text_edit(&self) -> Option<&TextEdit>;

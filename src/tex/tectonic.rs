@@ -3,7 +3,7 @@ use super::{
     kpsewhich::{KpsewhichError, Resolver},
     Distribution, DistributionKind,
 };
-use async_trait::async_trait;
+use language_server::async_trait::async_trait;
 use std::sync::Arc;
 
 #[derive(Debug, Default)]

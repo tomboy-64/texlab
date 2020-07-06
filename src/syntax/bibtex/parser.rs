@@ -1,8 +1,6 @@
 use super::ast::*;
-use crate::{
-    protocol::{Range, RangeExt},
-    syntax::text::SyntaxNode,
-};
+use crate::{protocol::RangeExt, syntax::text::SyntaxNode};
+use language_server::types::Range;
 use petgraph::graph::{Graph, NodeIndex};
 use std::iter::Peekable;
 

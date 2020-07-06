@@ -1,27 +1,27 @@
 use crate::{
-    protocol::{Diagnostic, DiagnosticSeverity, NumberOrString, Range, RangeExt, Uri},
+    protocol::{RangeExt, Uri},
     workspace::Document,
 };
-use chashmap::CHashMap;
 use futures::{
     future::{AbortHandle, Abortable, Aborted},
     lock::Mutex,
 };
+use language_server::types::{Diagnostic, DiagnosticSeverity, NumberOrString, Range};
 use log::trace;
 use once_cell::sync::Lazy;
 use regex::Regex;
-use std::process::Stdio;
+use std::{collections::HashMap, process::Stdio};
 use tokio::{prelude::*, process::Command};
 
 #[derive(Debug, Default)]
 pub struct LatexDiagnosticsProvider {
-    diagnostics_by_uri: CHashMap<Uri, Vec<Diagnostic>>,
+    diagnostics_by_uri: Mutex<HashMap<Uri, Vec<Diagnostic>>>,
     handle: Mutex<Option<AbortHandle>>,
 }
 
 impl LatexDiagnosticsProvider {
-    pub fn get(&self, document: &Document) -> Vec<Diagnostic> {
-        match self.diagnostics_by_uri.get(&document.uri) {
+    pub async fn get(&self, document: &Document) -> Vec<Diagnostic> {
+        match self.diagnostics_by_uri.lock().await.get(&document.uri) {
             Some(diagnostics) => diagnostics.to_owned(),
             None => Vec::new(),
         }
@@ -44,6 +44,8 @@ impl LatexDiagnosticsProvider {
         let future = Abortable::new(
             async move {
                 self.diagnostics_by_uri
+                    .lock()
+                    .await
                     .insert(uri.clone(), lint(text.into()).await.unwrap_or_default());
             },
             registration,

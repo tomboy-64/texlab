@@ -1,9 +1,6 @@
 #[cfg(feature = "citation")]
 pub mod citeproc;
 
-#[cfg(feature = "test")]
-pub mod test;
-
 cfg_if::cfg_if! {
     if #[cfg(feature = "server")] {
         mod config;

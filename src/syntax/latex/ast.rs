@@ -1,10 +1,11 @@
 use crate::{
-    protocol::{Position, Range, RangeExt},
+    protocol::RangeExt,
     syntax::{
         generic_ast::{Ast, AstNodeIndex},
         text::{Span, SyntaxNode},
     },
 };
+use language_server::types::{Position, Range};
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 

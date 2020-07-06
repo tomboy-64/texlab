@@ -3,8 +3,8 @@ use super::{
     kpsewhich::{self, KpsewhichError, Resolver},
     Artifacts, CompileError, CompileParams, Distribution, DistributionKind,
 };
-use async_trait::async_trait;
 use futures::lock::Mutex;
+use language_server::async_trait::async_trait;
 use std::{
     io, mem,
     path::{Path, PathBuf},

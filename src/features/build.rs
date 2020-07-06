@@ -5,6 +5,7 @@ use futures::{
     prelude::*,
     stream,
 };
+use language_server::LanguageClient;
 use log::error;
 use std::{
     collections::{HashMap, HashSet},
@@ -20,16 +21,14 @@ use tokio::{
 use uuid::Uuid;
 
 #[derive(Debug)]
-pub struct BuildEngine<C> {
-    client: Arc<C>,
+pub struct BuildEngine {
     handles_by_token: Mutex<HashMap<ProgressToken, AbortHandle>>,
     current_docs: Mutex<HashSet<Uri>>,
 }
 
-impl<C: LspClient + Send + Sync + 'static> BuildEngine<C> {
-    pub fn new(client: Arc<C>) -> Self {
+impl BuildEngine {
+    pub fn new() -> Self {
         Self {
-            client,
             handles_by_token: Mutex::default(),
             current_docs: Mutex::default(),
         }
@@ -50,7 +49,11 @@ impl<C: LspClient + Send + Sync + 'static> BuildEngine<C> {
         }
     }
 
-    pub async fn execute(&self, ctx: &FeatureContext<BuildParams>) -> BuildResult {
+    pub async fn execute(
+        &self,
+        ctx: &FeatureContext<BuildParams>,
+        client: Arc<dyn LanguageClient>,
+    ) -> BuildResult {
         let token = ProgressToken::String(format!("texlab-build-{}", Uuid::new_v4()));
         let (handle, reg) = AbortHandle::new_pair();
         {
@@ -86,7 +89,7 @@ impl<C: LspClient + Send + Sync + 'static> BuildEngine<C> {
                     let params = WorkDoneProgressCreateParams {
                         token: token.clone(),
                     };
-                    self.client.work_done_progress_create(params).await.unwrap();
+                    client.work_done_progress_create(params).await.unwrap();
 
                     let title = path.file_name().unwrap().to_string_lossy().into_owned();
                     let params = ProgressParams {
@@ -100,11 +103,11 @@ impl<C: LspClient + Send + Sync + 'static> BuildEngine<C> {
                             },
                         )),
                     };
-                    self.client.progress(params).await;
+                    client.progress(params).await;
                 }
 
                 let latex_options = ctx.options.latex.clone().unwrap_or_default();
-                let client = Arc::clone(&self.client);
+                let client = Arc::clone(&client);
                 match Abortable::new(build(&path, &latex_options, client), reg).await {
                     Ok(Ok(true)) => BuildStatus::Success,
                     Ok(Ok(false)) => BuildStatus::Error,
@@ -128,7 +131,7 @@ impl<C: LspClient + Send + Sync + 'static> BuildEngine<C> {
                     message: None,
                 })),
             };
-            self.client.progress(params).await;
+            client.progress(params).await;
         }
         {
             let mut handles_by_token = self.handles_by_token.lock().await;
@@ -142,10 +145,11 @@ impl<C: LspClient + Send + Sync + 'static> BuildEngine<C> {
     }
 }
 
-async fn build<C>(path: &Path, options: &LatexOptions, client: Arc<C>) -> io::Result<bool>
-where
-    C: LspClient + Send + Sync + 'static,
-{
+async fn build(
+    path: &Path,
+    options: &LatexOptions,
+    client: Arc<dyn LanguageClient>,
+) -> io::Result<bool> {
     let build_options = options.build.as_ref().cloned().unwrap_or_default();
     let build_dir = options
         .root_directory

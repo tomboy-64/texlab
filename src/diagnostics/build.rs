@@ -1,8 +1,9 @@
 use crate::{
-    protocol::{Diagnostic, DiagnosticSeverity, Options, Position, Range, Uri},
+    protocol::{Options, Uri},
     workspace::{Document, Snapshot},
 };
 use futures::lock::Mutex;
+use language_server::types::{Diagnostic, DiagnosticSeverity, Position, Range};
 use once_cell::sync::Lazy;
 use regex::{Match, Regex};
 use std::{

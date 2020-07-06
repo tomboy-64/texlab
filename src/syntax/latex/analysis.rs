@@ -1,8 +1,9 @@
 use crate::{
-    protocol::{Options, Position, Range, RangeExt, Uri},
+    protocol::{Options, RangeExt, Uri},
     syntax::{generic_ast::AstNodeIndex, lang_data::*, latex::ast::*, text::SyntaxNode},
     tex::Resolver,
 };
+use language_server::types::{ Position, Range,};
 use itertools::{iproduct, Itertools};
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, ops::Deref, path::Path};

@@ -1,4 +1,4 @@
-use crate::protocol::{Position, Range};
+use language_server::types::{Position, Range};
 use serde::{Deserialize, Serialize};
 use std::{iter::Peekable, str::CharIndices};
 

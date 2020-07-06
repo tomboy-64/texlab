@@ -1,4 +1,4 @@
-use crate::protocol::{MarkupContent, MarkupKind};
+use language_server::types::{MarkupContent, MarkupKind};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 

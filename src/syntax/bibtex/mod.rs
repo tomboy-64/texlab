@@ -16,10 +16,8 @@ pub fn open(text: &str) -> Tree {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        protocol::{Range, RangeExt},
-        syntax::text::SyntaxNode,
-    };
+    use crate::{protocol::RangeExt, syntax::text::SyntaxNode};
+    use language_server::types::Range;
     use petgraph::graph::NodeIndex;
 
     #[derive(Debug, Default)]

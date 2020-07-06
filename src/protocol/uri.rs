@@ -1,4 +1,4 @@
-use lsp_types::{TextDocumentIdentifier, TextDocumentPositionParams};
+use language_server::types::{TextDocumentIdentifier, TextDocumentPositionParams};
 use serde::{Deserialize, Serialize};
 use std::{
     fmt,

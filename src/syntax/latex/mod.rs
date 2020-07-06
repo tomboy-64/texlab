@@ -48,11 +48,12 @@ pub fn open(params: OpenParams) -> SymbolTable {
 mod tests {
     use super::*;
     use crate::{
-        protocol::{Options, Range, RangeExt, Uri},
+        protocol::{Options, RangeExt, Uri},
         syntax::{generic_ast::AstNodeIndex, text::SyntaxNode},
         tex::Resolver,
     };
     use indoc::indoc;
+    use language_server::types::Range;
     use std::env;
 
     fn open_simple(text: &str) -> SymbolTable {

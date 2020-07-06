@@ -1,15 +1,3 @@
-cfg_if::cfg_if! {
-    if #[cfg(feature = "server")] {
-        mod client;
-        mod codec;
-
-        pub use self::{
-            client::{LatexLspClient, LspClient},
-            codec::LspCodec,
-        };
-    }
-}
-
 mod capabilities;
 mod edit;
 mod options;
@@ -23,17 +11,10 @@ pub use self::{
     range::RangeExt,
     uri::{AsUri, Uri},
 };
-pub use lsp_types::*;
 
+use language_server::types::TextDocumentIdentifier;
 use serde::{Deserialize, Serialize};
 use serde_repr::*;
-
-#[serde(untagged)]
-#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
-pub enum DefinitionResponse {
-    Locations(Vec<Location>),
-    LocationLinks(Vec<LocationLink>),
-}
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize_repr, Deserialize_repr)]
 #[repr(i32)]

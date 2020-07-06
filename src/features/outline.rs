@@ -4,7 +4,7 @@ use crate::{
     syntax::{latex, SyntaxNode},
     workspace::{Document, DocumentContent},
 };
-use lsp_types::{MarkupContent, MarkupKind, Position, Range};
+use language_server::types::{MarkupContent, MarkupKind, Position, Range};
 use std::{borrow::Cow, collections::HashSet, path::Path};
 use titlecase::titlecase;
 use OutlineContextItem::*;

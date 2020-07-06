@@ -19,7 +19,7 @@ use crate::{
     workspace::{Document, DocumentContent, Snapshot},
 };
 use itertools::Itertools;
-use lsp_types::ClientCapabilities;
+use language_server::types::ClientCapabilities;
 use std::{
     path::{Path, PathBuf},
     sync::Arc,

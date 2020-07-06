@@ -1,10 +1,11 @@
 use crate::{
     components::COMPONENT_DATABASE,
-    protocol::{Options, TextDocumentItem, Uri},
+    protocol::{Options, Uri},
     syntax::{bibtex, latex, LatexIncludeKind},
     tex::{Distribution, Language, Resolver},
 };
 use futures::lock::Mutex;
+use language_server::types::TextDocumentItem;
 use log::{debug, error, warn};
 use petgraph::{graph::Graph, visit::Dfs};
 use std::{
